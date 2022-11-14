@@ -1,0 +1,12 @@
+body {
+  padding-top: 15px;
+}
+
+#uploadModal .modal-dialog {
+  width: 80%;
+}
+
+.gt_table {
+  margin-left: 0 !important;
+  margin-bottom: 15px !important;
+}
