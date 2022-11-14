@@ -4,12 +4,18 @@ library(survival)
 library(shiny)
 library(datamods)
 library(colourpicker)
-library(labelled)
 library(gt)
 library(gtsummary)
 library(ggsurvfit)
 
 source("misc.R")
+
+rules <- validate::validator(!is.na(time), !is.na(status), !is.na(group),
+                             if (!is.na(time)) time >= 0,
+                             if (!is.na(status)) status %in% c(0,1))
+validate::label(rules) <- c("Time not empty", "Status not empty", "Group not empty",
+                            "Time ≥  0",
+                            "Status 0 or 1")
 
 ui <- fluidPage(
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
@@ -19,6 +25,7 @@ ui <- fluidPage(
             varSelectInput("varGroup",  "Group",  data = NULL),
             checkboxInput("showCensor", "Show censoring?")),
     div(class = "container",
+        div(uiOutput("warningsUI")),
         div(class = "position-relative",
             plotOutput("survPlot", height = "auto"),
             popover(tags$span(class = "btn btn-default btn-xs position-absolute top-0 right-0", icon("gear"), "Options"),
@@ -44,9 +51,7 @@ server <- function(input, output, session) {
             return(with(aml, data.frame(time, status, group = x)))
         }
         data %>%
-            na_if("") %>%
-            as_tibble(.name_repair = "universal_quiet") %>%
-            set_variable_labels(.labels = colnames(data))
+            na_if("")
     })
 
     observeEvent(data(), {
@@ -56,12 +61,29 @@ server <- function(input, output, session) {
         updateVarSelectInput(session, "varGroup",  data = data, selected = "group")
     })
 
-    output$palInput <- renderUI({
+    fit_data <- reactive({
         data <- data()
-        varGroup <- as.character(input$varGroup)
-        validate(need(length(varGroup) > 0 && !is.null(data[[varGroup]]), label = "Group"))
+        varTime   <- input$varTime
+        varStatus <- input$varStatus
+        varGroup  <- input$varGroup
+        validate(need(length(varTime)   > 0 && !is.null(data[[varTime]]),   label = "Time"),
+                 need(length(varStatus) > 0 && !is.null(data[[varStatus]]), label = "Status"),
+                 need(length(varGroup)  > 0 && !is.null(data[[varGroup]]),  label = "Group"))
+        select(data, time = !!varTime, status = !!varStatus, group = !!varGroup)
+    })
 
-        groups <- unique(na.omit(data[[varGroup]]))
+    validation <- validation_server("validation", fit_data, rules = rules)
+
+    output$warningsUI <- renderUI({
+        result <- validation$details()
+        if (is.null(result)) return()
+        warnings <- keep(result, ~ .$status != "OK")
+        map(warnings, ~ alert(HTML(.$label)))
+    })
+
+    output$palInput <- renderUI({
+        fit_data <- fit_data()
+        groups <- unique(na.omit(fit_data$group))
         pal <- scales::hue_pal()(length(groups))
         imap(groups, function(group, i) {
             inputId <- sprintf("pal%d", i)
@@ -71,11 +93,8 @@ server <- function(input, output, session) {
     })
 
     pal <- reactive({
-        data <- data()
-        varGroup <- as.character(input$varGroup)
-        validate(need(length(varGroup) > 0 && !is.null(data[[varGroup]]), label = "Group"))
-
-        groups <- unique(na.omit(data[[varGroup]]))
+        fit_data <- fit_data()
+        groups <- unique(na.omit(fit_data$group))
         pal <- imap(groups, function(group, i) {
             inputId <- sprintf("pal%d", i)
             input[[inputId]]
@@ -84,18 +103,7 @@ server <- function(input, output, session) {
         as.character(pal)
     })
 
-    fla <- reactive({
-        data <- data()
-        varTime   <- as.character(input$varTime)
-        varStatus <- as.character(input$varStatus)
-        varGroup  <- as.character(input$varGroup)
-        validate(need(length(varTime)   > 0 && !is.null(data[[varTime]]),   label = "Time"),
-                 need(length(varStatus) > 0 && !is.null(data[[varStatus]]), label = "Status"),
-                 need(length(varGroup)  > 0 && !is.null(data[[varGroup]]),  label = "Group"))
-        as.formula(sprintf("Surv(%s, %s) ~ %s", varTime, varStatus, varGroup))
-    })
-
-    fit <- reactive(survfit2(fla(), data()))
+    fit <- reactive(survfit2(Surv(time, status) ~ group, fit_data()))
 
     xbreaks <- reactive({
         time <- fit()$time
@@ -127,27 +135,23 @@ server <- function(input, output, session) {
     }, width = width, height = height)
 
     output$propsTable <- render_gt({
-        data <- data()
-        fla <- fla()
-        fit <- eval(rlang::expr(survfit(!!fla, !!data)))
-        tbl <- fit %>%
+        fit_data <- fit_data()
+        fit <- eval(rlang::expr(survfit(Surv(time, status) ~ group, !!fit_data)))
+        fit %>%
             tbl_survfit(probs = .5) %>%
             add_n() %>%
             add_nevent() %>%
-            add_p()
-            # modify_table_body(. %>% filter(row_type == "level"))
-        as_gt(tbl)
+            add_p() %>%
+            as_gt()
     })
 
     output$timesTable <- render_gt({
-        data <- data()
-        fla <- fla()
-        fit <- eval(rlang::expr(survfit(!!fla, !!data)))
         xbreaks <- keep(xbreaks(), ~ . > 0)
-        tbl <- fit %>%
+        fit <- fit()
+        fit %>%
             tbl_survfit(times = xbreaks, label = ~ "") %>%
-            modify_table_body(. %>% filter(row_type == "level"))
-        as_gt(tbl)
+            modify_table_body(. %>% filter(row_type == "level")) %>%
+            as_gt()
     })
 }
 

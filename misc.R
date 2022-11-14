@@ -2,6 +2,11 @@ details <- function(summary, ...) {
   tags$details(tags$summary(summary), ...)
 }
 
+alert <- function(..., status = "warning", class = "", style = "margin-bottom: 10px; padding: 10px 15px;") {
+  class <- c(class, "alert", sprintf("alert-%s", status))
+  tags$div(class = class, style = style, ...)
+}
+
 popover <- function(trigger, ..., class = "") {
   if (is.character(trigger)) {
     triggerId <- sprintf("%s-trigger", trigger)
