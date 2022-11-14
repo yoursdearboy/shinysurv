@@ -1,15 +1,3 @@
-modalDialogUI <- function(id, ...) {
-  div(class = "modal", id = id,
-      div(class = "modal-dialog",
-          div(class = "modal-content",
-              div(class = "modal-body", ...))))
-}
-
-modalButtonUI <- function(id, ...) {
-  href <- sprintf("#%s", id)
-  tags$a(class = "btn btn-default", href = href, `data-toggle` = "modal", ...)
-}
-
 details <- function(summary, ...) {
   tags$details(tags$summary(summary), ...)
 }

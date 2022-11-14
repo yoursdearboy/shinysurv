@@ -2,8 +2,9 @@ library(dplyr)
 library(purrr)
 library(survival)
 library(shiny)
-library(DataEditR)
+library(datamods)
 library(colourpicker)
+library(labelled)
 library(gt)
 library(gtsummary)
 library(ggsurvfit)
@@ -12,10 +13,7 @@ source("misc.R")
 
 ui <- fluidPage(
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
-    modalDialogUI(id = "uploadModal",
-                  dataInputUI("dataInput", c("80%", "20%")),
-                  div(dataEditUI("dataEdit"), style = "min-height: 400px; overflow: hidden;")),
-    toolbar(modalButtonUI(id = "uploadModal", "Upload data"),
+    toolbar(actionButton("importButton", "Import data"),
             varSelectInput("varTime",   "Time",   data = NULL),
             varSelectInput("varStatus", "Status", data = NULL),
             varSelectInput("varGroup",  "Group",  data = NULL),
@@ -34,21 +32,21 @@ ui <- fluidPage(
         gt_output("timesTable")))
 
 server <- function(input, output, session) {
-    dataTemplate <- data.frame(time   = as.double(rep(NA,1000)),
-                               status = as.integer(rep(NA,1000)),
-                               group  = as.character(rep(NA,1000)))
-    dataTemplate <- rbind(with(aml, data.frame(time, status, group = x)), dataTemplate)
-    dataInput <- dataInputServer("dataInput")
-    dataEdit <- dataEditServer("dataEdit", data = reactive({
-        dataInput <- dataInput()
-        isEmpty <- all(dataInput == "")
-        if (isEmpty) dataTemplate else dataInput
-    }), overflow = "visible")
+    observeEvent(input$importButton, {
+        import_modal(id = "importModal", from = c("file", "copypaste", "googlesheets", "url", "env"))
+    })
+
+    import <- import_server("importModal", return_class = "tbl_df")
 
     data <- reactive({
-        dataEdit() %>%
-            filter(if_any(everything(), ~ !is.na(.))) %>%
-            mutate_if(is.character, na_if, "")
+        data <- import$data()
+        if (is.null(data)) {
+            return(with(aml, data.frame(time, status, group = x)))
+        }
+        data %>%
+            na_if("") %>%
+            as_tibble(.name_repair = "universal_quiet") %>%
+            set_variable_labels(.labels = colnames(data))
     })
 
     observeEvent(data(), {
