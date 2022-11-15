@@ -17,15 +17,14 @@ validate::label(rules) <- c("Time not empty", "Status not empty", "Group not emp
                             "Time ≥  0",
                             "Status 0 or 1")
 
-ui <- fluidPage(
+ui <- fixedPage(
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
     toolbar(actionButton("importButton", "Import data"),
             varSelectInput("varTime",   "Time",   data = NULL),
             varSelectInput("varStatus", "Status", data = NULL),
             varSelectInput("varGroup",  "Group",  data = NULL),
             checkboxInput("showCensor", "Show censoring?")),
-    div(class = "container",
-        div(uiOutput("warningsUI")),
+    div(div(uiOutput("warningsUI")),
         div(class = "position-relative",
             plotOutput("survPlot", height = "auto"),
             popover(tags$span(class = "btn btn-default btn-xs position-absolute top-0 right-0", icon("gear"), "Options"),
