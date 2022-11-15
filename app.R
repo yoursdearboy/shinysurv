@@ -23,7 +23,8 @@ ui <- fixedPage(
             varSelectInput("varTime",   "Time",   data = NULL),
             varSelectInput("varStatus", "Status", data = NULL),
             varSelectInput("varGroup",  "Group",  data = NULL),
-            checkboxInput("showCensor", "Show censoring?")),
+            checkboxInput("addCensorMark", "Add censoring?"),
+            checkboxInput("addConfInt", "Add 95% CI?")),
     div(div(uiOutput("warningsUI")),
         div(class = "position-relative",
             plotOutput("survPlot", height = "auto"),
@@ -33,7 +34,8 @@ ui <- fixedPage(
                     textInput("xlab", "X label", "Time"),
                     textInput("ylab", "Y label", "Probability"),
                     tags$label("Palette"),
-                    uiOutput("palInput"))),
+                    uiOutput("palInput"),
+                    sliderInput("alpha", "Opacity", 0, 1, .1, step = .01))),
         gt_output("propsTable"),
         gt_output("timesTable")))
 
@@ -114,9 +116,9 @@ server <- function(input, output, session) {
 
     output$survPlot <- renderPlot({
         fit <- fit()
-        pal <- pal()
 
-        showCensor <- input$showCensor
+        addConfInt    <- input$addConfInt
+        addCensorMark <- input$addCensorMark
 
         xlab <- input$xlab
         xbreaks <- xbreaks()
@@ -124,8 +126,12 @@ server <- function(input, output, session) {
         ylab <- input$ylab
         ybreaks <- seq(0,1,.2)
 
+        pal <- pal()
+        alpha <- input$alpha
+
         ggsurvfit(fit, size = 1, theme = theme_classic(15)) +
-            { if (showCensor) add_censor_mark(size = 4, stroke = 1) } +
+            { if (addConfInt) add_confidence_interval(alpha = alpha) } +
+            { if (addCensorMark) add_censor_mark(size = 4, stroke = 1) } +
             scale_ggsurvfit(x_scales = list(name = xlab, breaks = xbreaks),
                             y_scales = list(name = ylab, breaks = ybreaks)) +
             { if (!is.null(pal)) scale_color_manual(values = pal) } +
