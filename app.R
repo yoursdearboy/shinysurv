@@ -4,6 +4,7 @@ library(survival)
 library(shiny)
 library(datamods)
 library(colourpicker)
+library(DT)
 library(gt)
 library(gtsummary)
 library(ggsurvfit)
@@ -37,7 +38,9 @@ ui <- fixedPage(
                     uiOutput("palInput"),
                     sliderInput("alpha", "Opacity", 0, 1, .1, step = .01))),
         gt_output("propsTable"),
-        gt_output("timesTable")))
+        gt_output("timesTable"),
+        collapsible(tags$button(class = "btn btn-default btn-sm", icon("caret-down"), "Complete results"),
+                    dataTableOutput("resultsTable"))))
 
 server <- function(input, output, session) {
     observeEvent(input$importButton, {
@@ -157,6 +160,27 @@ server <- function(input, output, session) {
             tbl_survfit(times = xbreaks, label = ~ "") %>%
             modify_table_body(. %>% filter(row_type == "level")) %>%
             as_gt()
+    })
+
+    output$resultsTable <- renderDataTable({
+        fit <- fit()
+        df <- fit %>%
+            tidy_survfit() %>%
+            select(strata, time, n.risk, n.event, n.censor, estimate, std.error, conf.low, conf.high)
+        colnames <- c("Group", "Time", "At risk", "Events", "Censored", "Survival", "SE", "95% CI low", "95% CI high")
+        datatable(df,
+                  colnames = colnames,
+                  rownames = NULL,
+                  selection = "none",
+                  filter = "top",
+                  extensions = "RowGroup",
+                  options = list(dom = 't',
+                                 scrollY = 500,
+                                 info = F,
+                                 paging = F,
+                                 rowGroup = list(dataSrc = 0))) %>%
+            formatRound(c("time"), 2) %>%
+            formatPercentage(c("estimate", "std.error", "conf.low", "conf.high"), 2)
     })
 }
 

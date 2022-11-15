@@ -1,5 +1,10 @@
-details <- function(summary, ...) {
-  tags$details(tags$summary(summary), ...)
+collapsible <- function(trigger, ...) {
+  randomId <- paste(sample(c(0:9, letters), 10, replace = T), collapse = "")
+  trigger$attribs[["data-toggle"]] <- "collapse"
+  trigger$attribs[["data-target"]] <- sprintf("#%s", randomId)
+  list(
+    trigger,
+    div(id = randomId, class = "collapse", ...))
 }
 
 alert <- function(..., status = "warning", class = "", style = "margin-bottom: 10px; padding: 10px 15px;") {
