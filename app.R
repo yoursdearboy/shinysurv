@@ -30,6 +30,7 @@ ui <- fixedPage(
         div(class = "position-relative",
             plotOutput("survPlot", height = "auto"),
             popover(tags$span(class = "btn btn-default btn-xs position-absolute top-0 right-0", icon("gear"), "Options"),
+                    numericInput("size", "Font size", 16),
                     numericInput("width",  "Width",  800),
                     numericInput("height", "Height", 570),
                     textInput("xlab", "X label", "Time"),
@@ -114,6 +115,7 @@ server <- function(input, output, session) {
         scales::breaks_extended(5)(time)
     })
 
+    size   <- reactive(input$size)
     width  <- reactive(input$width)
     height <- reactive(input$height)
 
@@ -132,14 +134,14 @@ server <- function(input, output, session) {
         pal <- pal()
         alpha <- input$alpha
 
-        ggsurvfit(fit, size = 1, theme = theme_classic(15)) +
+        ggsurvfit(fit, size = 1, theme = theme_classic(size())) +
             { if (addConfInt) add_confidence_interval(alpha = alpha) } +
             { if (addCensorMark) add_censor_mark(size = 4, stroke = 1) } +
             scale_ggsurvfit(x_scales = list(name = xlab, breaks = xbreaks),
                             y_scales = list(name = ylab, breaks = ybreaks)) +
             { if (!is.null(pal)) scale_color_manual(values = pal) } +
             theme(legend.position = "bottom",
-                  legend.text = element_text(size = 15))
+                  legend.text = element_text(size = rel(1)))
     }, width = width, height = height)
 
     output$propsTable <- render_gt({
