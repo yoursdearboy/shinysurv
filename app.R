@@ -81,7 +81,6 @@ server <- function(input, output, session) {
 
     output$warningsUI <- renderUI({
         result <- validation$details()
-        if (is.null(result)) return()
         warnings <- keep(result, ~ .$status != "OK")
         map(warnings, ~ alert(HTML(.$label)))
     })
