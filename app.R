@@ -167,7 +167,7 @@ server <- function(input, output, session) {
         fit <- fit()
         df <- fit %>%
             tidy_survfit() %>%
-            { if (is.null(.[["strata"]])) mutate(., strata = "All") } %>%
+            { if (is.null(.[["strata"]])) mutate(., strata = "All") else . } %>%
             select(strata, time, n.risk, n.event, n.censor, estimate, std.error, conf.low, conf.high)
         colnames <- c("Group", "Time", "At risk", "Events", "Censored", "Survival", "SE", "95% CI low", "95% CI high")
         datatable(df,
