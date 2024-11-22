@@ -172,7 +172,7 @@ server <- function(input, output, session) {
             { if (addCensorMark) add_censor_mark(size = 4, stroke = 1) } +
             scale_ggsurvfit(x_scales = list(name = xlab, breaks = xbreaks, limits = xlim),
                             y_scales = list(name = ylab, breaks = ybreaks, limits = ylim)) +
-            { if (!is.null(pal)) scale_color_manual(values = pal) } +
+            { if (!is.null(pal)) scale_color_manual(values = pal, aesthetics = c("color", "fill")) } +
             theme_classic(size()) +
             theme(legend.position = "bottom",
                   legend.text = element_text(size = rel(1)))
