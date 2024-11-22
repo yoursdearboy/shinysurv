@@ -178,13 +178,10 @@ server <- function(input, output, session) {
         is_ms <- is_ms()
         tbl <- if (is_ms) {
             fit <- eval(rlang::expr(cuminc(Surv(time, status, type="mstate") ~ group, !!fit_data)))
-            fit %>%
-                tbl_cuminc() %>%
-                modify_column_hide(starts_with("stat_"))
+            tbl_cuminc(fit)
         } else {
             fit <- eval(rlang::expr(survfit(Surv(time, status) ~ group, !!fit_data)))
-            fit %>%
-                tbl_survfit(probs = .5)
+            tbl_survfit(fit, probs = .5)
         }
         tbl %>%
             add_n() %>%
