@@ -86,7 +86,12 @@ server <- function(input, output, session) {
 
     is_ms <- reactive({
         fit_data <- fit_data()
-        length(unique(fit_data$status)) > 2
+        sum(!is.na(unique(fit_data$status))) > 2
+    })
+
+    has_groups <- reactive({
+        fit_data <- fit_data()
+        sum(!is.na(unique(fit_data$group))) > 1
     })
 
     validation <- validation_server("validation", fit_data, rules = rules)
@@ -176,6 +181,7 @@ server <- function(input, output, session) {
     output$propsTable <- render_gt({
         fit_data <- fit_data()
         is_ms <- is_ms()
+        has_groups <- has_groups()
         tbl <- if (is_ms) {
             fit <- eval(rlang::expr(cuminc(Surv(time, status, type="mstate") ~ group, !!fit_data)))
             tbl_cuminc(fit)
@@ -186,7 +192,7 @@ server <- function(input, output, session) {
         tbl %>%
             add_n() %>%
             add_nevent() %>%
-            add_p(pvalue_fun = scales::pvalue) %>%
+            { if (has_groups) add_p(., pvalue_fun = scales::pvalue) else . } %>%
             as_gt()
     })
 
@@ -194,13 +200,10 @@ server <- function(input, output, session) {
         xbreaks <- keep(xbreaks(), ~ . > 0)
         fit <- fit()
         is_ms <- is_ms()
-        tbl_fun <- if (is_ms) {
-            tbl_cuminc
-        } else {
-            tbl_survfit
-        }
+        has_groups <- has_groups()
+        tbl_fun <- if (is_ms) tbl_cuminc else tbl_survfit
         tbl_fun(fit, times = xbreaks, label = "") %>%
-            modify_table_body(. %>% filter(row_type == "level")) %>%
+            { if (has_groups) modify_table_body(., . %>% filter(., row_type == "level")) else . } %>%
             as_gt()
     })
 
