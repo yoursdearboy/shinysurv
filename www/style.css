@@ -5,6 +5,7 @@ body {
 .position-relative { position: relative; }
 .position-absolute { position: absolute; }
 .top-0 { top: 0; }
+.top-30 { top: 30px; }
 .right-0 { right: 0; }
 
 .gt_table {

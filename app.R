@@ -40,11 +40,13 @@ ui <- fixedPage(
                     numericInput("size", "Font size", 16),
                     numericInput("width",  "Width",  800),
                     numericInput("height", "Height", 570),
+                    numericInput("dpi", "Download DPI", 300),
                     textInput("xlab", "X label", "Time"),
                     textInput("ylab", "Y label", "Probability"),
                     tags$label("Palette"),
                     uiOutput("palInput"),
-                    sliderInput("alpha", "Opacity", 0, 1, .1, step = .01))),
+                    sliderInput("alpha", "Opacity", 0, 1, .1, step = .01)),
+            downloadButton("downloadPlot", class = "btn btn-default btn-xs position-absolute top-30 right-0")),
         gt_output("propsTable"),
         gt_output("timesTable"),
         collapsible(tags$button(class = "btn btn-default btn-sm", icon("caret-down"), "Complete results"),
@@ -142,8 +144,10 @@ server <- function(input, output, session) {
     size   <- reactive(input$size)
     width  <- reactive(input$width)
     height <- reactive(input$height)
+    res    <- 72
+    dpi    <- reactive(input$dpi)
 
-    output$survPlot <- renderPlot({
+    survPlot <- reactive({
         fit <- fit()
         is_ms <- is_ms()
 
@@ -176,7 +180,15 @@ server <- function(input, output, session) {
             theme_classic(size()) +
             theme(legend.position = "bottom",
                   legend.text = element_text(size = rel(1)))
-    }, width = width, height = height)
+    })
+
+    output$survPlot <- renderPlot(survPlot(), res = res, width = width, height = height)
+
+    output$downloadPlot <- downloadHandler("shinysurv.png", function(file) {
+        dpi <- dpi()
+        scale <- dpi / res
+        ggsave(file, survPlot(), dpi = dpi, width = width() * scale, height = height() * scale, units = "px")
+    })
 
     output$propsTable <- render_gt({
         fit_data <- fit_data()
