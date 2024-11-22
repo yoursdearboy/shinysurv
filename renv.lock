@@ -156,6 +156,13 @@
       "Repository": "CRAN",
       "Hash": "3f038e5ac7f41d4ac41ce658c85e3042"
     },
+    "cmprsk": {
+      "Package": "cmprsk",
+      "Version": "2.2-12",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "c733af3a77ab8bde9b6a632197342cb9"
+    },
     "colorspace": {
       "Package": "colorspace",
       "Version": "2.0-3",
@@ -344,6 +351,13 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "853727ca1318bc9c51b7f3cee5367dc8"
+    },
+    "hardhat": {
+      "Package": "hardhat",
+      "Version": "1.4.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e7aabf81944f6c6cbbcec1f85827a279"
     },
     "haven": {
       "Package": "haven",
@@ -641,10 +655,10 @@
     },
     "rlang": {
       "Package": "rlang",
-      "Version": "1.0.6",
+      "Version": "1.1.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "4ed1f8336c8d52c3e750adcdc57228a7"
+      "Hash": "dc079ccd156cde8647360f473c1fa718"
     },
     "rsconnect": {
       "Package": "rsconnect",
@@ -739,10 +753,17 @@
     },
     "tibble": {
       "Package": "tibble",
-      "Version": "3.1.8",
+      "Version": "3.2.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "56b6934ef0f8c68225949a8672fe1a8f"
+      "Hash": "a84e2cc86d07289b3b6f5069df7a004c"
+    },
+    "tidycmprsk": {
+      "Package": "tidycmprsk",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "0287e08e40808a708156bd8a90ef06c0"
     },
     "tidyr": {
       "Package": "tidyr",
@@ -781,10 +802,10 @@
     },
     "vctrs": {
       "Package": "vctrs",
-      "Version": "0.5.0",
+      "Version": "0.6.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "001fd6a5ebfff8316baf9fb2b5516dc9"
+      "Hash": "7e877404388794361277be95d8445de8"
     },
     "viridisLite": {
       "Package": "viridisLite",

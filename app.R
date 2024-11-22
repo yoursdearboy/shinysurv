@@ -8,18 +8,25 @@ library(DT)
 library(gt)
 library(gtsummary)
 library(ggsurvfit)
+library(tidycmprsk)
 
 source("misc.R")
 
 rules <- validate::validator(!is.na(time), !is.na(status), !is.na(group),
                              if (!is.na(time)) time >= 0,
-                             if (!is.na(status)) status %in% c(0,1))
+                             if (!is.na(status)) status %in% c(0,1,2,3,4,5,6))
 validate::label(rules) <- c("Time not empty", "Status not empty", "Group not empty",
                             "Time ≥  0",
-                            "Status 0 or 1")
+                            "Status is 0/1/2/3/4/5/6")
 
 ui <- fixedPage(
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+    tags$p(
+        "Click ", tags$b("Import data"), " below and add data with at least 3 variables: ",
+        "time to event (numeric),",
+        "status indicator (numeric, 0 for censoring, 1 for event of interest, 2/3/4/5/6 for competing events if any),",
+        "group indicator."
+    ),
     toolbar(actionButton("importButton", "Import data"),
             varSelectInput("varTime",   "Time",   data = NULL),
             varSelectInput("varStatus", "Status", data = NULL),
@@ -77,6 +84,11 @@ server <- function(input, output, session) {
         select(data, time = !!varTime, status = !!varStatus, group = !!varGroup)
     })
 
+    is_ms <- reactive({
+        fit_data <- fit_data()
+        length(unique(fit_data$status)) > 2
+    })
+
     validation <- validation_server("validation", fit_data, rules = rules)
 
     output$warningsUI <- renderUI({
@@ -107,10 +119,18 @@ server <- function(input, output, session) {
         as.character(pal)
     })
 
-    fit <- reactive(survfit2(Surv(time, status) ~ group, fit_data()))
+    fit <- reactive({
+        fit_data <- fit_data()
+        is_ms <- is_ms()
+        if (is_ms) {
+            cuminc(Surv(time, status, type="mstate") ~ group, fit_data)
+        } else {
+            survfit2(Surv(time, status) ~ group, fit_data)
+        }
+    })
 
     xbreaks <- reactive({
-        time <- fit()$time
+        time <- fit_data()$time
         scales::breaks_extended(5)(time)
     })
 
@@ -120,56 +140,85 @@ server <- function(input, output, session) {
 
     output$survPlot <- renderPlot({
         fit <- fit()
+        is_ms <- is_ms()
 
         addConfInt    <- input$addConfInt
         addCensorMark <- input$addCensorMark
 
         xlab <- input$xlab
+        xlim <- NULL
         xbreaks <- xbreaks()
 
         ylab <- input$ylab
+        ylim <- c(0,1)
         ybreaks <- seq(0,1,.2)
 
         pal <- pal()
         alpha <- input$alpha
 
-        ggsurvfit(fit, size = 1, theme = theme_classic(size())) +
+        plot <- if (is_ms) {
+            ggcuminc(fit, outcome = 1, size = 1)
+        } else {
+            ggsurvfit(fit, size = 1)
+        }
+
+        plot +
             { if (addConfInt) add_confidence_interval(alpha = alpha) } +
             { if (addCensorMark) add_censor_mark(size = 4, stroke = 1) } +
-            scale_ggsurvfit(x_scales = list(name = xlab, breaks = xbreaks),
-                            y_scales = list(name = ylab, breaks = ybreaks)) +
+            scale_ggsurvfit(x_scales = list(name = xlab, breaks = xbreaks, limits = xlim),
+                            y_scales = list(name = ylab, breaks = ybreaks, limits = ylim)) +
             { if (!is.null(pal)) scale_color_manual(values = pal) } +
+            theme_classic(size()) +
             theme(legend.position = "bottom",
                   legend.text = element_text(size = rel(1)))
     }, width = width, height = height)
 
     output$propsTable <- render_gt({
         fit_data <- fit_data()
-        fit <- eval(rlang::expr(survfit(Surv(time, status) ~ group, !!fit_data)))
-        fit %>%
-            tbl_survfit(probs = .5) %>%
+        is_ms <- is_ms()
+        tbl <- if (is_ms) {
+            fit <- eval(rlang::expr(cuminc(Surv(time, status, type="mstate") ~ group, !!fit_data)))
+            fit %>%
+                tbl_cuminc() %>%
+                modify_column_hide(starts_with("stat_"))
+        } else {
+            fit <- eval(rlang::expr(survfit(Surv(time, status) ~ group, !!fit_data)))
+            fit %>%
+                tbl_survfit(probs = .5)
+        }
+        tbl %>%
             add_n() %>%
             add_nevent() %>%
-            add_p() %>%
+            add_p(pvalue_fun = scales::pvalue) %>%
             as_gt()
     })
 
     output$timesTable <- render_gt({
         xbreaks <- keep(xbreaks(), ~ . > 0)
         fit <- fit()
-        fit %>%
-            tbl_survfit(times = xbreaks, label = ~ "") %>%
+        is_ms <- is_ms()
+        tbl_fun <- if (is_ms) {
+            tbl_cuminc
+        } else {
+            tbl_survfit
+        }
+        tbl_fun(fit, times = xbreaks, label = "") %>%
             modify_table_body(. %>% filter(row_type == "level")) %>%
             as_gt()
     })
 
     output$resultsTable <- renderDataTable({
         fit <- fit()
-        df <- fit %>%
-            tidy_survfit() %>%
+        is_ms <- is_ms()
+        fun <- if (is_ms) {
+            function(x) filter(tidy_cuminc(x), outcome == 1)
+        } else {
+            tidy_survfit
+        }
+        df <- fun(fit) %>%
             { if (is.null(.[["strata"]])) mutate(., strata = "All") else . } %>%
             select(strata, time, n.risk, n.event, n.censor, estimate, std.error, conf.low, conf.high)
-        colnames <- c("Group", "Time", "At risk", "Events", "Censored", "Survival", "SE", "95% CI low", "95% CI high")
+        colnames <- c("Group", "Time", "At risk", "Events", "Censored", "Estimate", "SE", "95% CI low", "95% CI high")
         datatable(df,
                   colnames = colnames,
                   rownames = NULL,

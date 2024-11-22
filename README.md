@@ -3,7 +3,8 @@
 Shiny application for survival analysis.
 
 Works on top of brilliant Daniel Sjoberg's
-[ggsurvfit](www.danieldsjoberg.com/ggsurvfit/) and
+[ggsurvfit](https://www.danieldsjoberg.com/ggsurvfit/),
+[tidycmprsk](https://mskcc-epi-bio.github.io/tidycmprsk/) and
 [gtsummary](https://github.com/ddsjoberg/gtsummary) packages.
 
 ## Demonstration
