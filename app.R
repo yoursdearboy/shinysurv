@@ -64,8 +64,7 @@ server <- function(input, output, session) {
         if (is.null(data)) {
             return(with(aml, data.frame(time, status, group = x)))
         }
-        data %>%
-            na_if("")
+        data
     })
 
     observeEvent(data(), {
@@ -198,7 +197,7 @@ server <- function(input, output, session) {
             fit <- eval(rlang::expr(cuminc(Surv(time, status, type="mstate") ~ group, !!fit_data)))
             tbl_cuminc(fit)
         } else {
-            fit <- eval(rlang::expr(survfit(Surv(time, status) ~ group, !!fit_data)))
+            fit <- eval(rlang::expr(survfit2(Surv(time, status) ~ group, !!fit_data)))
             tbl_survfit(fit, probs = .5)
         }
         tbl %>%
